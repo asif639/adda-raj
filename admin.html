@@ -1,0 +1,234 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#244c36">
+<title>আড্ডা রাজ | অ্যাডমিন</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6f0;color:#24352a;font-family:Arial,sans-serif}
+header{background:#244c36;color:white;padding:20px 16px}
+header h2{margin:0 0 5px}
+header p{margin:0;font-size:13px}
+main{max-width:650px;margin:auto;padding:16px}
+.card{background:white;padding:18px;border-radius:14px;margin-bottom:14px;box-shadow:0 2px 10px #0000000c}
+h3{margin-top:0}
+input,select,button{width:100%;padding:12px;margin:7px 0;border-radius:8px;font-size:15px}
+input,select{border:1px solid #ccd5ca;background:white}
+button{border:0;background:#244c36;color:white;font-weight:bold;cursor:pointer}
+button.secondary{background:#e4ebe2;color:#244c36}
+.small{font-size:13px;color:#667368}
+.status{font-weight:bold;color:#244c36}
+#message{white-space:pre-wrap;font-size:14px}
+.order{border:1px solid #e0e6dc;padding:13px;border-radius:10px;margin:12px 0}
+.order p{margin:7px 0;overflow-wrap:anywhere}
+.hidden{display:none}
+.row{display:flex;gap:8px;align-items:center}
+.row button{flex:1}
+</style>
+</head>
+<body>
+<header>
+<h2>আড্ডা রাজ</h2>
+<p>অ্যাডমিন প্যানেল · অর্ডার ব্যবস্থাপনা</p>
+</header>
+
+<main>
+<section id="login" class="card">
+<h3>অ্যাডমিন লগইন</h3>
+<form id="loginForm">
+<label for="email">ইমেইল</label>
+<input id="email" type="email" autocomplete="username" required>
+<label for="password">পাসওয়ার্ড</label>
+<input id="password" type="password" autocomplete="current-password" required>
+<button type="submit">লগইন করো</button>
+</form>
+<p id="loginMessage" class="small"></p>
+</section>
+
+<section id="dashboard" class="hidden">
+<div class="card">
+<div class="row">
+<div style="flex:1">
+<h3 style="margin-bottom:4px">অর্ডার তালিকা</h3>
+<p class="small">সর্বশেষ অর্ডার আগে দেখানো হবে</p>
+</div>
+<button id="refresh" type="button">রিফ্রেশ</button>
+</div>
+<p id="message"></p>
+<div id="orders"></div>
+</div>
+<div class="card">
+<button id="logout" type="button" class="secondary">লগআউট</button>
+</div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://aidqolykizqvgqekgkch.supabase.co";
+const SUPABASE_KEY = "sb_publishable_-1Lacx4HBZLhN9xv3i4zgg_jH9QYB90";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const loginBox = document.getElementById("login");
+const dashboard = document.getElementById("dashboard");
+const loginMessage = document.getElementById("loginMessage");
+const message = document.getElementById("message");
+const ordersBox = document.getElementById("orders");
+
+function showLoggedIn(isLoggedIn) {
+  loginBox.classList.toggle("hidden", isLoggedIn);
+  dashboard.classList.toggle("hidden", !isLoggedIn);
+}
+
+async function checkAdmin() {
+  const { data: { session }, error } = await db.auth.getSession();
+
+  if (error || !session) {
+    showLoggedIn(false);
+    return;
+  }
+
+  const { data: isAdmin, error: adminError } =
+    await db.rpc("is_cafe_admin");
+
+  if (adminError || isAdmin !== true) {
+    await db.auth.signOut();
+    showLoggedIn(false);
+    loginMessage.textContent =
+      "এই অ্যাকাউন্ট অ্যাডমিন হিসেবে অনুমোদিত নয়।";
+    return;
+  }
+
+  showLoggedIn(true);
+  await loadOrders();
+}
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginMessage.textContent = "লগইন হচ্ছে...";
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    loginMessage.textContent = "লগইন হয়নি: " + error.message;
+    return;
+  }
+
+  await checkAdmin();
+});
+
+async function loadOrders() {
+  message.textContent = "অর্ডার লোড হচ্ছে...";
+  ordersBox.replaceChildren();
+
+  const { data, error } = await db
+    .from("orders")
+    .select("id, table_number, customer_nam, note, total, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    message.textContent = "অর্ডার লোড হয়নি: " + error.message;
+    return;
+  }
+
+  message.textContent = data.length
+    ? "মোট দেখানো অর্ডার: " + data.length
+    : "এখনও কোনো অর্ডার নেই।";
+
+  data.forEach(order => {
+    const card = document.createElement("div");
+    card.className = "order";
+
+    const title = document.createElement("h3");
+    title.textContent = "অর্ডার #" + order.id;
+    card.appendChild(title);
+
+    function addLine(label, value) {
+      const p = document.createElement("p");
+      p.textContent = label + ": " +
+        (value === null || value === undefined || value === ""
+          ? "—" : String(value));
+      card.appendChild(p);
+    }
+
+    addLine("টেবিল", order.table_number);
+    addLine("কাস্টমার", order.customer_nam);
+    addLine("নোট", order.note);
+    addLine("মোট", "৳" + order.total);
+    addLine("সময়", new Date(order.created_at).toLocaleString("bn-BD"));
+
+    const label = document.createElement("label");
+    label.textContent = "অর্ডারের স্ট্যাটাস";
+    card.appendChild(label);
+
+    const select = document.createElement("select");
+    [
+      ["pending", "অপেক্ষমাণ"],
+      ["accepted", "গ্রহণ করা হয়েছে"],
+      ["preparing", "প্রস্তুত হচ্ছে"],
+      ["ready", "পরিবেশনের জন্য প্রস্তুত"],
+      ["completed", "সম্পন্ন"],
+      ["cancelled", "বাতিল"]
+    ].forEach(([value, text]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = text;
+      select.appendChild(option);
+    });
+
+    select.value = order.status || "pending";
+    card.appendChild(select);
+
+    const save = document.createElement("button");
+    save.textContent = "স্ট্যাটাস সংরক্ষণ";
+    save.type = "button";
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      save.textContent = "সংরক্ষণ হচ্ছে...";
+
+      const { error: updateError } = await db
+        .from("orders")
+        .update({ status: select.value })
+        .eq("id", order.id);
+
+      save.disabled = false;
+      save.textContent = "স্ট্যাটাস সংরক্ষণ";
+
+      if (updateError) {
+        alert("স্ট্যাটাস বদলানো যায়নি: " + updateError.message);
+      } else {
+        alert("স্ট্যাটাস সংরক্ষণ হয়েছে।");
+        await loadOrders();
+      }
+    });
+
+    card.appendChild(save);
+    ordersBox.appendChild(card);
+  });
+}
+
+document.getElementById("refresh").addEventListener("click", loadOrders);
+
+document.getElementById("logout").addEventListener("click", async () => {
+  await db.auth.signOut();
+  showLoggedIn(false);
+  ordersBox.replaceChildren();
+  loginMessage.textContent = "লগআউট হয়েছে।";
+});
+
+db.auth.onAuthStateChange((_event, session) => {
+  if (!session) showLoggedIn(false);
+});
+
+checkAdmin();
+</script>
+</body>
+</html>
