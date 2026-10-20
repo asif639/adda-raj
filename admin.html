@@ -125,6 +125,15 @@ function escapeHTML(value) {
   })[ch]);
 }
 
+function getField(row, names) {
+  for (const name of names) {
+    if (Object.prototype.hasOwnProperty.call(row, name)) {
+      return row[name];
+    }
+  }
+  return null;
+}
+
 function statusLabel(value) {
   const found = statusOptions.find(item => item[0] === value);
   return found ? found[1] : (value || "অজানা");
@@ -136,8 +145,7 @@ async function checkAdmin() {
 
   if (sessionError) throw sessionError;
 
-  const session = sessionData.session;
-  if (!session) {
+  if (!sessionData.session) {
     showLogin();
     return false;
   }
@@ -145,17 +153,13 @@ async function checkAdmin() {
   const {data, error} = await db.rpc("is_cafe_admin");
 
   if (error) {
-    throw new Error(
-      "অ্যাডমিন অনুমতি যাচাই করা যায়নি: " + error.message
-    );
+    throw new Error("অ্যাডমিন অনুমতি যাচাই করা যায়নি: " + error.message);
   }
 
   if (data !== true) {
     await db.auth.signOut();
     showLogin();
-    throw new Error(
-      "এই অ্যাকাউন্ট অ্যাডমিন হিসেবে অনুমোদিত নয়।"
-    );
+    throw new Error("এই অ্যাকাউন্ট অ্যাডমিন হিসেবে অনুমোদিত নয়।");
   }
 
   showDashboard();
@@ -178,8 +182,8 @@ $("loginForm").addEventListener("submit", async event => {
 
     if (error) throw error;
 
-    await checkAdmin();
-    await loadOrders();
+    const allowed = await checkAdmin();
+    if (allowed) await loadOrders();
   } catch (error) {
     message(error.message || "লগইন করা যায়নি।");
   } finally {
@@ -192,6 +196,7 @@ async function loadOrders() {
   if (busy) return;
   busy = true;
   clearMessage();
+
   $("orders").textContent = "অর্ডার লোড হচ্ছে...";
   $("summary").textContent = "অপেক্ষা করো...";
 
@@ -199,17 +204,28 @@ async function loadOrders() {
     const allowed = await checkAdmin();
     if (!allowed) return;
 
+    // সব কলাম আনা হচ্ছে, তাই কলামের নাম আগে থেকে অনুমান করতে হচ্ছে না।
     const {data, error} = await db
       .from("orders")
-      .select("id, table_number, customer_nam, note, total, status, created_at")
-      .order("created_at", {ascending:false})
+      .select("*")
       .limit(100);
 
     if (error) throw error;
 
     const orders = data || [];
-    $("summary").textContent =
-      "মোট দেখানো অর্ডার: " + orders.length;
+
+    // ডাটাবেসে তারিখের কলামের নাম যেভাবেই থাকুক, সেটি খুঁজে নেবে।
+    orders.sort((a, b) => {
+      const dateA = getField(a, ["created_at", "created at"]);
+      const dateB = getField(b, ["created_at", "created at"]);
+      const timeA = dateA ? new Date(dateA).getTime() : 0;
+      const timeB = dateB ? new Date(dateB).getTime() : 0;
+
+      if (timeA && timeB) return timeB - timeA;
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    $("summary").textContent = "মোট দেখানো অর্ডার: " + orders.length;
 
     if (!orders.length) {
       $("orders").textContent = "এখনো কোনো অর্ডার পাওয়া যায়নি।";
@@ -217,8 +233,13 @@ async function loadOrders() {
     }
 
     $("orders").innerHTML = orders.map(order => {
-      const date = order.created_at
-        ? new Date(order.created_at).toLocaleString("bn-BD")
+      const table = getField(order, ["table_number", "table number"]);
+      const customer = getField(order, [
+        "customer_nam", "customer nam", "customer_name", "customer name"
+      ]);
+      const created = getField(order, ["created_at", "created at"]);
+      const date = created && !isNaN(new Date(created).getTime())
+        ? new Date(created).toLocaleString("bn-BD")
         : "সময় পাওয়া যায়নি";
 
       const options = statusOptions.map(([value, label]) =>
@@ -231,8 +252,8 @@ async function loadOrders() {
         <article class="order">
           <h4>অর্ডার #${escapeHTML(order.id)}</h4>
           <div class="details">
-            <div><b>টেবিল:</b> ${escapeHTML(order.table_number ?? "—")}</div>
-            <div><b>কাস্টমার:</b> ${escapeHTML(order.customer_nam || "নাম দেওয়া হয়নি")}</div>
+            <div><b>টেবিল:</b> ${escapeHTML(table ?? "—")}</div>
+            <div><b>কাস্টমার:</b> ${escapeHTML(customer || "নাম দেওয়া হয়নি")}</div>
             <div><b>মোট:</b> ৳${escapeHTML(order.total ?? 0)}</div>
             <div><b>বর্তমান স্ট্যাটাস:</b> ${escapeHTML(statusLabel(order.status))}</div>
             <div><b>নোট:</b> ${escapeHTML(order.note || "নেই")}</div>
@@ -260,6 +281,7 @@ $("orders").addEventListener("click", async event => {
   if (!btn) return;
 
   clearMessage();
+
   const id = btn.dataset.orderId;
   const select = $("status-" + id);
   const newStatus = select.value;
@@ -268,11 +290,12 @@ $("orders").addEventListener("click", async event => {
   btn.textContent = "সেভ হচ্ছে...";
 
   try {
-    await checkAdmin();
+    const allowed = await checkAdmin();
+    if (!allowed) return;
 
     const {data, error} = await db
       .from("orders")
-      .update({status:newStatus})
+      .update({status: newStatus})
       .eq("id", id)
       .select("id");
 
