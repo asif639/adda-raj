@@ -149,7 +149,7 @@ const items=products.filter(p=>cart[p.id]);
 const total=items.reduce((sum,p)=>sum+p.price*cart[p.id],0);
 try{
 const headers={"Content-Type":"application/json","apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Prefer":"return=representation"};
-const res=await fetch(SUPABASE_URL+"/rest/v1/orders",{method:"POST",headers,body:JSON.stringify({table_number:Number(table),customer_name:document.getElementById("customer").value,note:document.getElementById("note").value,total,status:"নতুন"})});
+const res=await fetch(SUPABASE_URL+"/rest/v1/orders",{method:"POST",headers,body:JSON.stringify({table_number:Number(table),customer_nam:document.getElementById("customer").value,note:document.getElementById("note").value,total,status:"নতুন"})});
 if(!res.ok)throw new Error(await res.text());
 const order=(await res.json())[0];
 const rows=items.map(p=>({order_id:order.id,menu_item_id:p.id,menu_name:p.name,quantity:cart[p.id],unit_price:p.price}));
@@ -157,7 +157,10 @@ const r2=await fetch(SUPABASE_URL+"/rest/v1/order_items",{method:"POST",headers,
 if(!r2.ok)throw new Error(await r2.text());
 message.textContent="অর্ডার গ্রহণ করা হয়েছে! অর্ডার নম্বর: "+order.id+"। টাকা ক্যাফেতে সরাসরি পরিশোধ করুন।";
 cart={};updateCart();
-}catch(e){message.textContent="অর্ডার পাঠানো যায়নি। ডেটাবেজের অনুমতি ও সংযোগ পরীক্ষা করতে হবে।";console.error(e);}
+}catch(e){
+  message.textContent = "অর্ডার পাঠানো যায়নি: " + e.message;
+  console.error(e);
+}
 }
 renderMenu();
 </script>
