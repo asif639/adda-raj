@@ -9,51 +9,86 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f5ef;color:#24352a;font-family:Arial,sans-serif}
-header{background:#244c36;color:white;text-align:center;padding:20px 12px}
-header h2{margin:0 0 7px}
-main{max-width:850px;margin:20px auto;padding:0 12px}
-.card{background:white;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 10px #0001}
-h3{margin-top:0}
-input,button,select,textarea{width:100%;padding:12px;margin:6px 0;border:1px solid #ccd5cb;border-radius:8px;font-size:15px}
+header{background:#244c36;color:white;text-align:center;padding:18px 10px}
+header h2{margin:0 0 6px}
+header p{margin:0;font-size:13px}
+main{max-width:850px;margin:16px auto;padding:0 10px}
+.card{background:white;padding:15px;border-radius:12px;margin-bottom:14px;box-shadow:0 2px 10px #0001}
+h3{margin:0 0 14px}
+input,button,select,textarea{width:100%;padding:11px;margin:5px 0;border:1px solid #ccd5cb;border-radius:8px;font-size:15px}
 button{background:#244c36;color:white;border:0;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.6}
 .hidden{display:none!important}
 .notice{padding:12px;border-radius:8px;margin-bottom:12px;white-space:pre-wrap;overflow-wrap:anywhere}
 .error{background:#ffeded;color:#922}
 .success{background:#e6f5e8;color:#245c2b}
-.order{border:1px solid #dce4db;border-radius:10px;padding:14px;margin:12px 0}
-.order h4{margin:0 0 8px}
-.details{font-size:14px;line-height:1.8;overflow-wrap:anywhere}
-.muted{color:#637267;font-size:12px}
+.muted{color:#637267;font-size:12px;line-height:1.7}
 .row{display:flex;gap:8px}
 .row>*{flex:1;min-width:0}
+.order,.food-card{border:1px solid #dce4db;border-radius:10px;padding:12px;margin:12px 0}
+.order h4{margin:0 0 8px}
+.details{font-size:14px;line-height:1.8;overflow-wrap:anywhere}
 .pending{border-left:5px solid #d58b18}
 .statusline{font-weight:bold;color:#805400}
 .smallbtn{padding:10px}
 .food-img{width:100%;max-width:220px;height:145px;object-fit:cover;border-radius:9px;display:block;margin:8px 0}
-.food-card{border:1px solid #dce4db;border-radius:10px;padding:12px;margin:12px 0}
 .food-title{font-size:17px;font-weight:bold}
-.food-meta{font-size:13px;color:#637267;line-height:1.8}
+.food-meta{font-size:13px;color:#637267;line-height:1.9}
 .preview{max-width:220px;max-height:180px;object-fit:cover;border-radius:10px;display:block;margin:8px 0}
-hr{border:0;border-top:1px solid #e0e5dd;margin:18px 0}
-button.secondary{background:#64746a}
-button.danger{background:#a52d2d}
-button.orange{background:#956317}
+.secondary{background:#64746a}
+.danger{background:#a52d2d}
+.orange{background:#956317}
 label{display:block;margin-top:8px;font-size:14px;font-weight:bold}
-@media(max-width:450px){.row{flex-direction:column}}
+hr{border:0;border-top:1px solid #e0e5dd;margin:16px 0}
+
+/* একই সারিতে ট্যাব */
+.tabs{
+ display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:5px;
+ padding:7px;
+ background:white;
+ border-radius:12px;
+ margin-bottom:14px;
+ box-shadow:0 2px 10px #0001;
+ position:sticky;
+ top:0;
+ z-index:10
+}
+.tab{
+ margin:0;
+ padding:11px 2px;
+ min-width:0;
+ border-radius:8px;
+ background:#edf1eb;
+ color:#244c36;
+ font-size:12px;
+ line-height:1.5;
+ overflow-wrap:anywhere
+}
+.tab.active{background:#244c36;color:white}
+.tab-icon{display:block;font-size:20px;margin-bottom:2px}
+.panel-title{display:flex;align-items:center;gap:8px}
+@media(max-width:380px){
+ .tab{font-size:10px;padding:9px 1px}
+ .tab-icon{font-size:18px}
+ .card{padding:12px}
+}
 </style>
 </head>
 <body>
+
 <header>
   <h2>আড্ডা রাজ</h2>
-  <p>অ্যাডমিন প্যানেল · অর্ডার ও খাবার ম্যানেজমেন্ট</p>
+  <p>অ্যাডমিন প্যানেল</p>
 </header>
 
 <main>
   <div id="notice" class="notice hidden"></div>
 
+  <!-- লগইন -->
   <section id="loginCard" class="card">
-    <h3>অ্যাডমিন লগইন</h3>
+    <h3>🔐 অ্যাডমিন লগইন</h3>
     <form id="loginForm">
       <label for="email">ইমেইল</label>
       <input id="email" type="email" autocomplete="username" required>
@@ -64,95 +99,122 @@ label{display:block;margin-top:8px;font-size:14px;font-weight:bold}
   </section>
 
   <section id="dashboard" class="hidden">
-    <div class="card">
-      <h3>🔔 অর্ডার অ্যালার্ম</h3>
-      <button id="alarmBtn" type="button">অ্যালার্ম চালু করুন</button>
-      <p id="alarmInfo" class="muted">অ্যালার্ম এখনো চালু করা হয়নি।</p>
-      <p>অটো-রিফ্রেশ: প্রতি ৫ সেকেন্ডে</p>
-      <div class="row">
-        <button id="refreshBtn" type="button">এখনই রিফ্রেশ</button>
-        <button id="logoutBtn" type="button">লগআউট</button>
+
+    <!-- চারটি ট্যাব একই সারিতে -->
+    <nav class="tabs" aria-label="অ্যাডমিন বিভাগ">
+      <button class="tab active" type="button" data-tab="ordersPanel">
+        <span class="tab-icon">📦</span>অর্ডার
+      </button>
+      <button class="tab" type="button" data-tab="noticesPanel">
+        <span class="tab-icon">📢</span>নোটিশ
+      </button>
+      <button class="tab" type="button" data-tab="menuPanel">
+        <span class="tab-icon">🍽️</span>নতুন মেনু
+      </button>
+      <button class="tab" type="button" data-tab="settingsPanel">
+        <span class="tab-icon">⚙️</span>সেটিংস
+      </button>
+    </nav>
+
+    <!-- অর্ডার ট্যাব -->
+    <section id="ordersPanel" class="tabPanel">
+      <div class="card">
+        <h3>📦 অর্ডার তালিকা</h3>
+        <p id="summary">অর্ডার লোড হচ্ছে...</p>
+        <div id="orders">লোড হচ্ছে...</div>
       </div>
-      <p id="summary">অর্ডার লোড হচ্ছে...</p>
-    </div>
+    </section>
 
-    <!-- খাবার যোগ ও সম্পাদনা -->
-    <div class="card">
-      <h3>🍽️ খাবার ম্যানেজমেন্ট</h3>
-      <p class="muted">এখানে খাবার যোগ করলে তথ্য menu_items টেবিলে সংরক্ষিত হবে। ছবি menu-photos bucket-এ আপলোড হবে।</p>
-
-      <form id="foodForm">
-        <input id="foodId" type="hidden">
-
-        <label for="foodName">খাবারের নাম *</label>
-        <input id="foodName" maxlength="100" placeholder="যেমন: মাসালা চা" required>
-
-        <label for="foodCategory">ক্যাটাগরি *</label>
-        <select id="foodCategory" required>
-          <option value="চা">চা</option>
-          <option value="নাস্তা">নাস্তা</option>
-          <option value="ফাস্ট ফুড">ফাস্ট ফুড</option>
-          <option value="ঠান্ডা পানীয়">ঠান্ডা পানীয়</option>
-          <option value="অন্যান্য">অন্যান্য</option>
-        </select>
-
-        <label for="foodDescription">খাবারের বিবরণ</label>
-        <textarea id="foodDescription" maxlength="500" rows="2"
-          placeholder="খাবারের সংক্ষিপ্ত বিবরণ"></textarea>
-
-        <label for="foodPrice">দাম (টাকা) *</label>
-        <input id="foodPrice" type="number" min="0" step="0.01"
-          placeholder="যেমন: ৩০" required>
-
-        <label for="foodEmoji">ইমোজি (ছবি না থাকলে)</label>
-        <input id="foodEmoji" maxlength="12" value="🍽️" placeholder="🍵">
-
-        <label for="foodImage">খাবারের ছবি</label>
-        <input id="foodImage" type="file" accept="image/jpeg,image/png,image/webp">
-        <p class="muted">JPG, PNG বা WebP ছবি বেছে নাও। সর্বোচ্চ ৫ MB।</p>
-        <img id="foodPreview" class="preview hidden" alt="খাবারের ছবির প্রিভিউ">
-
-        <label for="foodSort">মেনুতে অবস্থান</label>
-        <input id="foodSort" type="number" step="1" value="0">
-
-        <label>
-          <input id="foodAvailable" type="checkbox" checked
-            style="width:auto;margin-right:6px">
-          খাবারটি বিক্রির জন্য চালু থাকবে
-        </label>
-
-        <button id="foodSaveBtn" type="submit">＋ নতুন খাবার যোগ করো</button>
-        <button id="foodCancelBtn" class="secondary hidden" type="button">
-          সম্পাদনা বাতিল
-        </button>
-      </form>
-
-      <hr>
-      <div class="row">
-        <button id="loadFoodBtn" type="button">মেনু রিফ্রেশ</button>
+    <!-- নোটিশ ট্যাব -->
+    <section id="noticesPanel" class="tabPanel hidden">
+      <div class="card">
+        <h3>📢 কাস্টমার নোটিশ বোর্ড</h3>
+        <p class="muted">এখানে পাঠানো নোটিশ কাস্টমার পেজে দেখানো হবে।</p>
+        <form id="noticeForm">
+          <label for="noticeText">নোটিশের লেখা</label>
+          <textarea id="noticeText" maxlength="500" rows="4"
+            placeholder="যেমন: আপনার অর্ডার তৈরি হচ্ছে..." required></textarea>
+          <button id="noticeBtn" type="submit">নোটিশ পাঠাও</button>
+        </form>
+        <hr>
+        <h3>সাম্প্রতিক নোটিশ</h3>
+        <div id="noticeList">লোড হচ্ছে...</div>
       </div>
-      <p id="foodSummary" class="muted">মেনু লোড হচ্ছে...</p>
-      <div id="foodList">লোড হচ্ছে...</div>
-    </div>
+    </section>
 
-    <!-- কাস্টমার নোটিশ -->
-    <div class="card">
-      <h3>📢 কাস্টমার নোটিশ</h3>
-      <p class="muted">এখানে পাঠানো নোটিশ কাস্টমার পেজে দেখানো হবে। ব্যক্তিগত তথ্য লিখবে না।</p>
-      <form id="noticeForm">
-        <textarea id="noticeText" maxlength="500" rows="3"
-          placeholder="যেমন: আপনার অর্ডার তৈরি হচ্ছে..." required></textarea>
-        <button id="noticeBtn" type="submit">নোটিশ পাঠাও</button>
-      </form>
-      <h4>সাম্প্রতিক নোটিশ</h4>
-      <div id="noticeList">লোড হচ্ছে...</div>
-    </div>
+    <!-- নতুন মেনু ট্যাব -->
+    <section id="menuPanel" class="tabPanel hidden">
+      <div class="card">
+        <h3>🍽️ খাবার যোগ ও ম্যানেজমেন্ট</h3>
+        <p class="muted">খাবারের তথ্য menu_items টেবিলে এবং ছবি menu-photos Storage bucket-এ সংরক্ষিত হবে।</p>
 
-    <!-- অর্ডার -->
-    <div class="card">
-      <h3>📦 সব অর্ডার</h3>
-      <div id="orders">লোড হচ্ছে...</div>
-    </div>
+        <form id="foodForm">
+          <input id="foodId" type="hidden">
+
+          <label for="foodName">খাবারের নাম *</label>
+          <input id="foodName" maxlength="100" placeholder="যেমন: মাসালা চা" required>
+
+          <label for="foodCategory">ক্যাটাগরি *</label>
+          <select id="foodCategory" required>
+            <option value="চা">চা</option>
+            <option value="নাস্তা">নাস্তা</option>
+            <option value="ফাস্ট ফুড">ফাস্ট ফুড</option>
+            <option value="ঠান্ডা পানীয়">ঠান্ডা পানীয়</option>
+            <option value="অন্যান্য">অন্যান্য</option>
+          </select>
+
+          <label for="foodDescription">খাবারের বিবরণ</label>
+          <textarea id="foodDescription" maxlength="500" rows="2"
+            placeholder="খাবারের সংক্ষিপ্ত বিবরণ"></textarea>
+
+          <label for="foodPrice">দাম (টাকা) *</label>
+          <input id="foodPrice" type="number" min="0" step="0.01"
+            placeholder="যেমন: ৩০" required>
+
+          <label for="foodEmoji">ইমোজি (ছবি না থাকলে)</label>
+          <input id="foodEmoji" maxlength="12" value="🍽️">
+
+          <label for="foodImage">খাবারের ছবি নির্বাচন</label>
+          <input id="foodImage" type="file" accept="image/jpeg,image/png,image/webp">
+          <p class="muted">JPG, PNG বা WebP। সর্বোচ্চ ৫ MB।</p>
+          <img id="foodPreview" class="preview hidden" alt="খাবারের ছবির প্রিভিউ">
+
+          <label for="foodSort">মেনুতে অবস্থান</label>
+          <input id="foodSort" type="number" step="1" value="0">
+
+          <label style="display:flex;align-items:center;gap:8px">
+            <input id="foodAvailable" type="checkbox" checked
+              style="width:18px;height:18px;flex-shrink:0">
+            খাবার বিক্রির জন্য চালু থাকবে
+          </label>
+
+          <button id="foodSaveBtn" type="submit">＋ নতুন খাবার যোগ করো</button>
+          <button id="foodCancelBtn" class="secondary hidden" type="button">
+            সম্পাদনা বাতিল
+          </button>
+        </form>
+
+        <hr>
+        <div class="row">
+          <button id="loadFoodBtn" type="button">মেনু রিফ্রেশ</button>
+        </div>
+        <p id="foodSummary" class="muted">মেনু লোড হচ্ছে...</p>
+        <div id="foodList">লোড হচ্ছে...</div>
+      </div>
+    </section>
+
+    <!-- সেটিংস ট্যাব -->
+    <section id="settingsPanel" class="tabPanel hidden">
+      <div class="card">
+        <h3>⚙️ সেটিংস</h3>
+        <p>অর্ডার অটো-রিফ্রেশ: প্রতি ৫ সেকেন্ডে।</p>
+        <p class="muted">অ্যালার্ম চালু করতে নিচের বোতামে একবার চাপো। ব্রাউজার থেকে শব্দের অনুমতি লাগতে পারে।</p>
+        <button id="alarmBtn" type="button">🔔 অ্যালার্ম চালু করুন</button>
+        <p id="alarmInfo" class="muted">অ্যালার্ম এখনো চালু করা হয়নি।</p>
+        <button id="refreshBtn" type="button">সব তথ্য রিফ্রেশ</button>
+        <button id="logoutBtn" class="danger" type="button">লগআউট</button>
+      </div>
+    </section>
   </section>
 </main>
 
@@ -163,16 +225,15 @@ label{display:block;margin-top:8px;font-size:14px;font-weight:bold}
 const SUPABASE_URL = "https://aidqolykizqvgqekgkch.supabase.co";
 const SUPABASE_KEY = "sb_publishable_-1Lacx4HBZLhN9xv3i4zgg_jH9QYB90";
 const BUCKET = "menu-photos";
-
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 
 let busy = false;
+let foodBusy = false;
 let pollTimer = null;
 let audioContext = null;
 let alarmEnabled = false;
 let firstOrderLoad = true;
-let foodBusy = false;
 const knownOrderIds = new Set();
 
 const statusOptions = [
@@ -183,6 +244,16 @@ const statusOptions = [
   ["completed", "সম্পন্ন"],
   ["cancelled", "বাতিল"]
 ];
+
+/* ট্যাব বদল */
+document.querySelectorAll(".tab").forEach(button => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tabPanel").forEach(p => p.classList.add("hidden"));
+    button.classList.add("active");
+    $(button.dataset.tab).classList.remove("hidden");
+  });
+});
 
 function message(text, type="error") {
   $("notice").textContent = text;
@@ -217,6 +288,7 @@ function statusLabel(value) {
   return found ? found[1] : (value || "পেন্ডিং");
 }
 
+/* অ্যাডমিন অনুমতি */
 async function checkAdmin() {
   const {data: sessionData, error: sessionError} = await db.auth.getSession();
   if (sessionError) throw sessionError;
@@ -243,24 +315,23 @@ async function checkAdmin() {
 async function enableAlarm() {
   try {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) throw new Error("এই ব্রাউজারে অডিও অ্যালার্ম সমর্থিত নয়।");
+    if (!AudioContextClass) throw new Error("এই ব্রাউজারে অ্যালার্ম সমর্থিত নয়।");
 
     if (!audioContext) audioContext = new AudioContextClass();
     if (audioContext.state === "suspended") await audioContext.resume();
 
     alarmEnabled = true;
     $("alarmBtn").textContent = "অ্যালার্ম চালু আছে ✓";
+    $("alarmInfo").textContent = "নতুন অর্ডার এলে শব্দ হবে।";
     playAlarm();
-    $("alarmInfo").textContent = "নতুন অর্ডার এলে অ্যালার্ম বাজবে।";
   } catch (error) {
     message("অ্যালার্ম চালু হয়নি: " + error.message);
   }
 }
-
 function playAlarm() {
   if (!alarmEnabled || !audioContext) return;
 
-  [0, 0.35, 0.70].forEach(delay => {
+  [0,0.35,0.70].forEach(delay => {
     const start = audioContext.currentTime + delay;
     const oscillator = audioContext.createOscillator();
     const gain = audioContext.createGain();
@@ -277,7 +348,7 @@ function playAlarm() {
   });
 }
 
-/* খাবারের ছবি প্রিভিউ */
+/* ছবির প্রিভিউ */
 $("foodImage").addEventListener("change", () => {
   const file = $("foodImage").files[0];
   const preview = $("foodPreview");
@@ -287,18 +358,14 @@ $("foodImage").addEventListener("change", () => {
     preview.classList.add("hidden");
     return;
   }
-
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+  if (!["image/jpeg","image/png","image/webp"].includes(file.type)) {
     $("foodImage").value = "";
-    preview.src = "";
     preview.classList.add("hidden");
     message("JPG, PNG অথবা WebP ছবি নির্বাচন করো।");
     return;
   }
-
   if (file.size > 5 * 1024 * 1024) {
     $("foodImage").value = "";
-    preview.src = "";
     preview.classList.add("hidden");
     message("ছবির আকার ৫ MB-এর কম হতে হবে।");
     return;
@@ -308,43 +375,38 @@ $("foodImage").addEventListener("change", () => {
   preview.classList.remove("hidden");
 });
 
-/* খাবারের ছবি Storage-এ আপলোড */
+/* Storage-এ ছবি আপলোড */
 async function uploadFoodImage(file) {
-  if (!file) return null;
-
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-    throw new Error("ছবিটি JPG, PNG অথবা WebP হতে হবে।");
+  if (!["image/jpeg","image/png","image/webp"].includes(file.type)) {
+    throw new Error("JPG, PNG অথবা WebP ছবি ব্যবহার করো।");
   }
   if (file.size > 5 * 1024 * 1024) {
     throw new Error("ছবির আকার ৫ MB-এর বেশি।");
   }
 
-  const ext = ({
+  const ext = {
     "image/jpeg":"jpg",
     "image/png":"png",
     "image/webp":"webp"
-  })[file.type];
+  }[file.type];
 
   const path = Date.now() + "-" +
-    Math.random().toString(36).slice(2, 10) + "." + ext;
+    Math.random().toString(36).slice(2,10) + "." + ext;
 
-  const {error} = await db.storage.from(BUCKET).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type
+  const {error} = await db.storage.from(BUCKET).upload(path,file,{
+    cacheControl:"3600",
+    upsert:false,
+    contentType:file.type
   });
 
   if (error) {
-    throw new Error(
-      "ছবি আপলোড হয়নি। Storage bucket ও upload policy পরীক্ষা করো। " +
-      error.message
-    );
+    throw new Error("ছবি আপলোড হয়নি। menu-photos bucket ও Storage policy পরীক্ষা করো। " + error.message);
   }
 
-  const {data} = db.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
+/* ফর্ম রিসেট */
 function resetFoodForm() {
   $("foodForm").reset();
   $("foodId").value = "";
@@ -355,12 +417,12 @@ function resetFoodForm() {
   $("foodCancelBtn").classList.add("hidden");
   $("foodPreview").src = "";
   $("foodPreview").classList.add("hidden");
+  $("foodPreview").dataset.savedUrl = "";
   $("foodImage").value = "";
 }
-
 $("foodCancelBtn").addEventListener("click", resetFoodForm);
 
-/* খাবার যোগ বা সম্পাদনা */
+/* খাবার যোগ বা আপডেট */
 $("foodForm").addEventListener("submit", async event => {
   event.preventDefault();
   if (foodBusy) return;
@@ -377,12 +439,8 @@ $("foodForm").addEventListener("submit", async event => {
   const file = $("foodImage").files[0];
 
   if (!name) return message("খাবারের নাম লিখো।");
-  if (!Number.isFinite(price) || price < 0) {
-    return message("সঠিক দাম লিখো।");
-  }
-  if (!Number.isFinite(sortOrder)) {
-    return message("মেনুর অবস্থানের জন্য সঠিক সংখ্যা লিখো।");
-  }
+  if (!Number.isFinite(price) || price < 0) return message("সঠিক দাম লিখো।");
+  if (!Number.isFinite(sortOrder)) return message("মেনুর অবস্থান সঠিকভাবে লিখো।");
 
   foodBusy = true;
   button.disabled = true;
@@ -392,10 +450,7 @@ $("foodForm").addEventListener("submit", async event => {
     if (!await checkAdmin()) return;
 
     let imageUrl = $("foodPreview").dataset.savedUrl || null;
-
-    if (file) {
-      imageUrl = await uploadFoodImage(file);
-    }
+    if (file) imageUrl = await uploadFoodImage(file);
 
     const row = {
       name,
@@ -403,43 +458,34 @@ $("foodForm").addEventListener("submit", async event => {
       description,
       price,
       emoji,
-      image_url: imageUrl,
+      image_url:imageUrl,
       available,
-      sort_order: Math.trunc(sortOrder)
+      sort_order:Math.trunc(sortOrder)
     };
 
     let result;
-
     if (id) {
       result = await db.from("menu_items")
-        .update(row)
-        .eq("id", id)
-        .select("id");
-
-      if (!result.error && (!result.data || !result.data.length)) {
-        throw new Error("খাবার আপডেট হয়নি। অ্যাডমিন অনুমতি ও RLS পরীক্ষা করো।");
-      }
+        .update(row).eq("id",id).select("id");
     } else {
       result = await db.from("menu_items")
-        .insert(row)
-        .select("id");
+        .insert(row).select("id");
     }
 
     if (result.error) throw result.error;
+    if (id && (!result.data || !result.data.length)) {
+      throw new Error("খাবার আপডেট হয়নি। অ্যাডমিন RLS অনুমতি পরীক্ষা করো।");
+    }
 
     resetFoodForm();
-    message(id ? "খাবারের তথ্য আপডেট হয়েছে।" : "নতুন খাবার যোগ হয়েছে।", "success");
+    message(id ? "খাবারের তথ্য আপডেট হয়েছে।" : "নতুন খাবার যোগ হয়েছে।","success");
     await loadFoods();
   } catch (error) {
-    message("খাবার সংরক্ষণ করা যায়নি: " + (error.message || error));
+    message("খাবার সংরক্ষণ করা যায়নি: " + error.message);
   } finally {
     foodBusy = false;
     button.disabled = false;
-    if ($("foodId").value) {
-      button.textContent = "পরিবর্তন সেভ করো";
-    } else {
-      button.textContent = "＋ নতুন খাবার যোগ করো";
-    }
+    button.textContent = $("foodId").value ? "পরিবর্তন সেভ করো" : "＋ নতুন খাবার যোগ করো";
   }
 });
 
@@ -450,57 +496,52 @@ async function loadFoods() {
   try {
     if (!await checkAdmin()) return;
 
-    const {data, error} = await db.from("menu_items")
+    const {data,error} = await db.from("menu_items")
       .select("id,name,category,description,price,emoji,image_url,available,sort_order,created_at")
-      .order("sort_order", {ascending:true});
+      .order("sort_order",{ascending:true});
 
     if (error) throw error;
 
     const foods = data || [];
     $("foodSummary").textContent =
       "মোট খাবার: " + foods.length +
-      " | চালু: " + foods.filter(x => x.available !== false).length +
-      " | বন্ধ: " + foods.filter(x => x.available === false).length;
+      " | চালু: " + foods.filter(f => f.available !== false).length +
+      " | বন্ধ: " + foods.filter(f => f.available === false).length;
 
     if (!foods.length) {
-      $("foodList").textContent = "এখনো খাবার যোগ করা হয়নি। উপরের ফর্ম ব্যবহার করো।";
+      $("foodList").textContent = "এখনো কোনো খাবার নেই। উপরের ফর্ম দিয়ে যোগ করো।";
       return;
     }
 
     $("foodList").innerHTML = foods.map(food => `
       <article class="food-card">
         <div class="food-title">${escapeHTML(food.emoji || "🍽️")} ${escapeHTML(food.name)}</div>
-        ${food.image_url ? `
-          <img class="food-img" src="${escapeHTML(food.image_url)}"
-            alt="${escapeHTML(food.name)}" loading="lazy"
-            onerror="this.style.display='none'">
-        ` : `<div style="font-size:34px;margin:8px 0">${escapeHTML(food.emoji || "🍽️")}</div>`}
+        ${food.image_url
+          ? `<img class="food-img" src="${escapeHTML(food.image_url)}" alt="${escapeHTML(food.name)}" loading="lazy" onerror="this.style.display='none'">`
+          : `<div style="font-size:32px;margin:8px 0">${escapeHTML(food.emoji || "🍽️")}</div>`}
         <div class="food-meta">
           ক্যাটাগরি: ${escapeHTML(food.category || "অন্যান্য")}<br>
           দাম: ৳${escapeHTML(food.price)}<br>
           বিবরণ: ${escapeHTML(food.description || "নেই")}<br>
-          অবস্থা: <b>${food.available === false ? "বন্ধ" : "চালু"}</b><br>
-          ছবি: ${food.image_url ? "আছে" : "নেই"}
+          অবস্থা: <b>${food.available === false ? "বন্ধ" : "চালু"}</b>
         </div>
         <div class="row">
           <button type="button" class="editFood" data-id="${escapeHTML(food.id)}">✏️ সম্পাদনা</button>
           <button type="button" class="toggleFood ${food.available === false ? "" : "orange"}"
             data-id="${escapeHTML(food.id)}"
             data-available="${food.available === false ? "false" : "true"}">
-            ${food.available === false ? "খাবার চালু করো" : "খাবার বন্ধ করো"}
+            ${food.available === false ? "চালু করো" : "বন্ধ করো"}
           </button>
         </div>
         <button type="button" class="danger deleteFood" data-id="${escapeHTML(food.id)}">🗑️ খাবার মুছে ফেলো</button>
       </article>
     `).join("");
-
-    $("foodList").dataset.loaded = "true";
   } catch (error) {
     $("foodList").textContent = "খাবার লোড হয়নি: " + error.message;
   }
 }
 
-/* সম্পাদনা, চালু/বন্ধ, মুছে ফেলা */
+/* খাবার সম্পাদনা / চালু-বন্ধ / ডিলিট */
 $("foodList").addEventListener("click", async event => {
   const editBtn = event.target.closest(".editFood");
   const toggleBtn = event.target.closest(".toggleFood");
@@ -513,21 +554,19 @@ $("foodList").addEventListener("click", async event => {
     if (!await checkAdmin()) return;
 
     if (editBtn) {
-      const {data, error} = await db.from("menu_items")
-        .select("*").eq("id", id).single();
-
+      const {data,error} = await db.from("menu_items")
+        .select("*").eq("id",id).single();
       if (error) throw error;
 
       $("foodId").value = data.id;
       $("foodName").value = data.name || "";
       $("foodCategory").value = data.category || "অন্যান্য";
 
-      // পুরোনো ক্যাটাগরি তালিকায় না থাকলে সেটিও রাখা
       if (![...$("foodCategory").options].some(o => o.value === data.category)) {
-        const opt = document.createElement("option");
-        opt.value = data.category;
-        opt.textContent = data.category;
-        $("foodCategory").appendChild(opt);
+        const option = document.createElement("option");
+        option.value = data.category;
+        option.textContent = data.category;
+        $("foodCategory").appendChild(option);
         $("foodCategory").value = data.category;
       }
 
@@ -537,8 +576,8 @@ $("foodList").addEventListener("click", async event => {
       $("foodSort").value = data.sort_order ?? 0;
       $("foodAvailable").checked = data.available !== false;
       $("foodImage").value = "";
-
       $("foodPreview").dataset.savedUrl = data.image_url || "";
+
       if (data.image_url) {
         $("foodPreview").src = data.image_url;
         $("foodPreview").classList.remove("hidden");
@@ -549,8 +588,8 @@ $("foodList").addEventListener("click", async event => {
 
       $("foodSaveBtn").textContent = "পরিবর্তন সেভ করো";
       $("foodCancelBtn").classList.remove("hidden");
-      $("foodForm").scrollIntoView({behavior:"smooth", block:"start"});
-      message("খাবার সম্পাদনার জন্য ফর্মে আনা হয়েছে। ছবি বদলাতে নতুন ছবি নির্বাচন করো।", "success");
+      $("foodForm").scrollIntoView({behavior:"smooth",block:"start"});
+      message("খাবার সম্পাদনার জন্য প্রস্তুত। ছবি বদলাতে নতুন ছবি নির্বাচন করো।","success");
       return;
     }
 
@@ -558,34 +597,27 @@ $("foodList").addEventListener("click", async event => {
       const newAvailable = toggleBtn.dataset.available !== "true";
       toggleBtn.disabled = true;
 
-      const {data, error} = await db.from("menu_items")
-        .update({available:newAvailable})
-        .eq("id", id)
-        .select("id");
+      const {data,error} = await db.from("menu_items")
+        .update({available:newAvailable}).eq("id",id).select("id");
 
       if (error) throw error;
       if (!data || !data.length) throw new Error("পরিবর্তন হয়নি। RLS অনুমতি পরীক্ষা করো।");
 
-      message(newAvailable ? "খাবার চালু করা হয়েছে।" : "খাবার বন্ধ করা হয়েছে।", "success");
+      message(newAvailable ? "খাবার চালু হয়েছে।" : "খাবার বন্ধ হয়েছে।","success");
       await loadFoods();
       return;
     }
 
-    if (deleteBtn) {
-      const ok = confirm("এই খাবারটি মুছে ফেলতে চাও? অর্ডারের পুরোনো তথ্য প্রভাবিত হতে পারে।");
-      if (!ok) return;
-
+    if (deleteBtn && confirm("এই খাবারটি মুছে ফেলতে চাও?")) {
       deleteBtn.disabled = true;
-      const {data, error} = await db.from("menu_items")
-        .delete().eq("id", id).select("id");
+      const {data,error} = await db.from("menu_items")
+        .delete().eq("id",id).select("id");
 
       if (error) throw error;
-      if (!data || !data.length) {
-        throw new Error("খাবার মুছে ফেলা যায়নি। RLS অনুমতি পরীক্ষা করো।");
-      }
+      if (!data || !data.length) throw new Error("খাবার মুছে ফেলা যায়নি। RLS অনুমতি পরীক্ষা করো।");
 
       if ($("foodId").value === String(id)) resetFoodForm();
-      message("খাবার মুছে ফেলা হয়েছে।", "success");
+      message("খাবার মুছে ফেলা হয়েছে।","success");
       await loadFoods();
     }
   } catch (error) {
@@ -593,7 +625,7 @@ $("foodList").addEventListener("click", async event => {
   }
 });
 
-$("loadFoodBtn").addEventListener("click", loadFoods);
+$("loadFoodBtn").addEventListener("click",loadFoods);
 
 /* অর্ডার লোড */
 async function loadOrders(silent=false) {
@@ -602,44 +634,33 @@ async function loadOrders(silent=false) {
   if (!silent) clearMessage();
 
   try {
-    const allowed = await checkAdmin();
-    if (!allowed) return;
+    if (!await checkAdmin()) return;
 
-    const {data, error} = await db.from("orders").select("*").limit(100);
+    const {data,error} = await db.from("orders").select("*").limit(100);
     if (error) throw error;
 
     const orders = data || [];
-    orders.sort((a, b) => {
-      const da = getField(a, ["created_at", "created at"]);
-      const dbb = getField(b, ["created_at", "created at"]);
-      const ta = da ? new Date(da).getTime() : 0;
-      const tb = dbb ? new Date(dbb).getTime() : 0;
+    orders.sort((a,b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
       if (ta && tb) return tb - ta;
       return Number(b.id || 0) - Number(a.id || 0);
     });
 
-    let newOrders = [];
     if (firstOrderLoad) {
-      orders.forEach(order => knownOrderIds.add(String(order.id)));
+      orders.forEach(o => knownOrderIds.add(String(o.id)));
       firstOrderLoad = false;
     } else {
-      newOrders = orders.filter(order => !knownOrderIds.has(String(order.id)));
-      orders.forEach(order => knownOrderIds.add(String(order.id)));
-
+      const newOrders = orders.filter(o => !knownOrderIds.has(String(o.id)));
+      orders.forEach(o => knownOrderIds.add(String(o.id)));
       if (newOrders.length) {
         playAlarm();
-        message("🔔 নতুন অর্ডার এসেছে! মোট নতুন অর্ডার: " + newOrders.length, "success");
+        message("🔔 নতুন অর্ডার এসেছে! সংখ্যা: " + newOrders.length,"success");
       }
     }
 
-    const pendingCount = orders.filter(order =>
-      (order.status || "pending") === "pending"
-    ).length;
-
-    $("summary").textContent =
-      "মোট অর্ডার: " + orders.length +
-      " | পেন্ডিং: " + pendingCount +
-      " | নতুন অর্ডার চেক: প্রতি ৫ সেকেন্ডে";
+    const pending = orders.filter(o => (o.status || "pending") === "pending").length;
+    $("summary").textContent = "মোট অর্ডার: " + orders.length + " | পেন্ডিং: " + pending;
 
     if (!orders.length) {
       $("orders").textContent = "এখনো কোনো অর্ডার পাওয়া যায়নি।";
@@ -647,17 +668,14 @@ async function loadOrders(silent=false) {
     }
 
     $("orders").innerHTML = orders.map(order => {
-      const table = getField(order, ["table_number", "table number"]);
-      const customer = getField(order, [
-        "customer_nam", "customer nam", "customer_name", "customer name"
-      ]);
-      const created = getField(order, ["created_at", "created at"]);
+      const table = getField(order,["table_number","table number"]);
+      const customer = getField(order,["customer_nam","customer nam","customer_name","customer name"]);
+      const created = order.created_at;
       const date = created && !isNaN(new Date(created).getTime())
-        ? new Date(created).toLocaleString("bn-BD")
-        : "সময় পাওয়া যায়নি";
+        ? new Date(created).toLocaleString("bn-BD") : "সময় পাওয়া যায়নি";
       const currentStatus = order.status || "pending";
 
-      const options = statusOptions.map(([value, label]) =>
+      const options = statusOptions.map(([value,label]) =>
         `<option value="${value}" ${currentStatus === value ? "selected" : ""}>${label}</option>`
       ).join("");
 
@@ -668,22 +686,16 @@ async function loadOrders(silent=false) {
             <div><b>টেবিল:</b> ${escapeHTML(table ?? "—")}</div>
             <div><b>কাস্টমার:</b> ${escapeHTML(customer || "নাম দেওয়া হয়নি")}</div>
             <div><b>মোট:</b> ৳${escapeHTML(order.total ?? 0)}</div>
-            <div class="statusline"><b>স্ট্যাটাস:</b> ${escapeHTML(statusLabel(currentStatus))}</div>
+            <div class="statusline">স্ট্যাটাস: ${escapeHTML(statusLabel(currentStatus))}</div>
             <div><b>নোট:</b> ${escapeHTML(order.note || "নেই")}</div>
             <div class="muted">${escapeHTML(date)}</div>
           </div>
-          ${currentStatus === "pending" ? `
-            <button type="button" class="acceptOrder smallbtn"
-              data-order-id="${escapeHTML(order.id)}">✓ অর্ডার গ্রহণ করুন</button>
-          ` : ""}
+          ${currentStatus === "pending" ? `<button type="button" class="acceptOrder smallbtn" data-order-id="${escapeHTML(order.id)}">✓ অর্ডার গ্রহণ করুন</button>` : ""}
           <label for="status-${escapeHTML(order.id)}">স্ট্যাটাস পরিবর্তন</label>
           <select id="status-${escapeHTML(order.id)}">${options}</select>
-          <button type="button" data-order-id="${escapeHTML(order.id)}"
-            class="saveStatus">স্ট্যাটাস সেভ করো</button>
-        </article>
-      `;
+          <button type="button" data-order-id="${escapeHTML(order.id)}" class="saveStatus">স্ট্যাটাস সেভ করো</button>
+        </article>`;
     }).join("");
-
   } catch (error) {
     $("orders").textContent = "অর্ডার লোড করা যায়নি।";
     if (!silent) message(error.message || "একটি সমস্যা হয়েছে।");
@@ -692,24 +704,21 @@ async function loadOrders(silent=false) {
   }
 }
 
-async function saveStatus(id, newStatus, button) {
+async function saveStatus(id,newStatus,button) {
   button.disabled = true;
   const oldText = button.textContent;
   button.textContent = "সেভ হচ্ছে...";
 
   try {
-    const allowed = await checkAdmin();
-    if (!allowed) return;
+    if (!await checkAdmin()) return;
 
-    const {data, error} = await db.from("orders")
-      .update({status:newStatus}).eq("id", id).select("id");
+    const {data,error} = await db.from("orders")
+      .update({status:newStatus}).eq("id",id).select("id");
 
     if (error) throw error;
-    if (!data || data.length === 0) {
-      throw new Error("স্ট্যাটাস সেভ হয়নি। অ্যাডমিন অনুমতি ও RLS পরীক্ষা করো।");
-    }
+    if (!data || !data.length) throw new Error("স্ট্যাটাস সেভ হয়নি। অ্যাডমিন RLS পরীক্ষা করো।");
 
-    message("অর্ডার #" + id + "-এর স্ট্যাটাস আপডেট হয়েছে।", "success");
+    message("অর্ডার #" + id + "-এর স্ট্যাটাস আপডেট হয়েছে।","success");
     await loadOrders(true);
   } catch (error) {
     message(error.message || "স্ট্যাটাস সেভ করা যায়নি।");
@@ -719,28 +728,25 @@ async function saveStatus(id, newStatus, button) {
   }
 }
 
-$("orders").addEventListener("click", async event => {
+$("orders").addEventListener("click",async event => {
   const acceptBtn = event.target.closest(".acceptOrder");
   const saveBtn = event.target.closest(".saveStatus");
 
   if (acceptBtn) {
-    await saveStatus(acceptBtn.dataset.orderId, "accepted", acceptBtn);
-    return;
-  }
-  if (saveBtn) {
+    await saveStatus(acceptBtn.dataset.orderId,"accepted",acceptBtn);
+  } else if (saveBtn) {
     const id = saveBtn.dataset.orderId;
-    await saveStatus(id, $("status-" + id).value, saveBtn);
+    await saveStatus(id,$("status-" + id).value,saveBtn);
   }
 });
 
 /* নোটিশ */
 async function loadNotices() {
   try {
-    const {data, error} = await db.from("cafe_notices")
-      .select("*").order("created_at", {ascending:false}).limit(10);
+    const {data,error} = await db.from("cafe_notices")
+      .select("*").order("created_at",{ascending:false}).limit(10);
 
     if (error) throw error;
-
     if (!data || !data.length) {
       $("noticeList").textContent = "এখনো কোনো নোটিশ নেই।";
       return;
@@ -749,9 +755,7 @@ async function loadNotices() {
     $("noticeList").innerHTML = data.map(item => `
       <div class="order">
         <div>${escapeHTML(item.message)}</div>
-        <div class="muted">${escapeHTML(
-          item.created_at ? new Date(item.created_at).toLocaleString("bn-BD") : ""
-        )}</div>
+        <div class="muted">${escapeHTML(item.created_at ? new Date(item.created_at).toLocaleString("bn-BD") : "")}</div>
       </div>
     `).join("");
   } catch (error) {
@@ -759,7 +763,7 @@ async function loadNotices() {
   }
 }
 
-$("noticeForm").addEventListener("submit", async event => {
+$("noticeForm").addEventListener("submit",async event => {
   event.preventDefault();
   const text = $("noticeText").value.trim();
   if (!text) return;
@@ -775,7 +779,7 @@ $("noticeForm").addEventListener("submit", async event => {
     if (error) throw error;
 
     $("noticeText").value = "";
-    message("নোটিশ প্রকাশ করা হয়েছে।", "success");
+    message("নোটিশ প্রকাশ করা হয়েছে।","success");
     await loadNotices();
   } catch (error) {
     message("নোটিশ পাঠানো যায়নি: " + error.message);
@@ -785,7 +789,7 @@ $("noticeForm").addEventListener("submit", async event => {
   }
 });
 
-/* অটো-রিফ্রেশ */
+/* রিফ্রেশ ও লগইন */
 function startAutoRefresh() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => {
@@ -793,28 +797,29 @@ function startAutoRefresh() {
       loadOrders(true);
       loadNotices();
     }
-  }, 5000);
+  },5000);
 }
 
-$("alarmBtn").addEventListener("click", enableAlarm);
-$("refreshBtn").addEventListener("click", async () => {
+$("alarmBtn").addEventListener("click",enableAlarm);
+
+$("refreshBtn").addEventListener("click",async () => {
   await loadOrders();
   await loadNotices();
   await loadFoods();
 });
 
-$("loginForm").addEventListener("submit", async event => {
+$("loginForm").addEventListener("submit",async event => {
   event.preventDefault();
   clearMessage();
 
-  const btn = $("loginBtn");
-  btn.disabled = true;
-  btn.textContent = "লগইন হচ্ছে...";
+  const button = $("loginBtn");
+  button.disabled = true;
+  button.textContent = "লগইন হচ্ছে...";
 
   try {
     const {error} = await db.auth.signInWithPassword({
-      email: $("email").value.trim(),
-      password: $("password").value
+      email:$("email").value.trim(),
+      password:$("password").value
     });
     if (error) throw error;
 
@@ -829,12 +834,12 @@ $("loginForm").addEventListener("submit", async event => {
   } catch (error) {
     message(error.message || "লগইন করা যায়নি।");
   } finally {
-    btn.disabled = false;
-    btn.textContent = "লগইন করো";
+    button.disabled = false;
+    button.textContent = "লগইন করো";
   }
 });
 
-$("logoutBtn").addEventListener("click", async () => {
+$("logoutBtn").addEventListener("click",async () => {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
 
@@ -848,8 +853,9 @@ $("logoutBtn").addEventListener("click", async () => {
   $("orders").innerHTML = "";
   $("noticeList").innerHTML = "";
   $("foodList").innerHTML = "";
+  resetFoodForm();
   clearMessage();
-  message("লগআউট হয়েছে।", "success");
+  message("লগআউট হয়েছে।","success");
 });
 
 (async function init() {
