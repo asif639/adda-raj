@@ -30,13 +30,23 @@ button:disabled{opacity:.6}
 .pending{border-left:5px solid #d58b18}
 .statusline{font-weight:bold;color:#805400}
 .smallbtn{padding:10px}
+.food-img{width:100%;max-width:220px;height:145px;object-fit:cover;border-radius:9px;display:block;margin:8px 0}
+.food-card{border:1px solid #dce4db;border-radius:10px;padding:12px;margin:12px 0}
+.food-title{font-size:17px;font-weight:bold}
+.food-meta{font-size:13px;color:#637267;line-height:1.8}
+.preview{max-width:220px;max-height:180px;object-fit:cover;border-radius:10px;display:block;margin:8px 0}
+hr{border:0;border-top:1px solid #e0e5dd;margin:18px 0}
+button.secondary{background:#64746a}
+button.danger{background:#a52d2d}
+button.orange{background:#956317}
+label{display:block;margin-top:8px;font-size:14px;font-weight:bold}
 @media(max-width:450px){.row{flex-direction:column}}
 </style>
 </head>
 <body>
 <header>
   <h2>আড্ডা রাজ</h2>
-  <p>অ্যাডমিন প্যানেল · অর্ডার ও নোটিশ</p>
+  <p>অ্যাডমিন প্যানেল · অর্ডার ও খাবার ম্যানেজমেন্ট</p>
 </header>
 
 <main>
@@ -58,7 +68,7 @@ button:disabled{opacity:.6}
       <h3>🔔 অর্ডার অ্যালার্ম</h3>
       <button id="alarmBtn" type="button">অ্যালার্ম চালু করুন</button>
       <p id="alarmInfo" class="muted">অ্যালার্ম এখনো চালু করা হয়নি।</p>
-      <p id="autoInfo">অটো-রিফ্রেশ: প্রতি ৫ সেকেন্ডে</p>
+      <p>অটো-রিফ্রেশ: প্রতি ৫ সেকেন্ডে</p>
       <div class="row">
         <button id="refreshBtn" type="button">এখনই রিফ্রেশ</button>
         <button id="logoutBtn" type="button">লগআউট</button>
@@ -66,6 +76,66 @@ button:disabled{opacity:.6}
       <p id="summary">অর্ডার লোড হচ্ছে...</p>
     </div>
 
+    <!-- খাবার যোগ ও সম্পাদনা -->
+    <div class="card">
+      <h3>🍽️ খাবার ম্যানেজমেন্ট</h3>
+      <p class="muted">এখানে খাবার যোগ করলে তথ্য menu_items টেবিলে সংরক্ষিত হবে। ছবি menu-photos bucket-এ আপলোড হবে।</p>
+
+      <form id="foodForm">
+        <input id="foodId" type="hidden">
+
+        <label for="foodName">খাবারের নাম *</label>
+        <input id="foodName" maxlength="100" placeholder="যেমন: মাসালা চা" required>
+
+        <label for="foodCategory">ক্যাটাগরি *</label>
+        <select id="foodCategory" required>
+          <option value="চা">চা</option>
+          <option value="নাস্তা">নাস্তা</option>
+          <option value="ফাস্ট ফুড">ফাস্ট ফুড</option>
+          <option value="ঠান্ডা পানীয়">ঠান্ডা পানীয়</option>
+          <option value="অন্যান্য">অন্যান্য</option>
+        </select>
+
+        <label for="foodDescription">খাবারের বিবরণ</label>
+        <textarea id="foodDescription" maxlength="500" rows="2"
+          placeholder="খাবারের সংক্ষিপ্ত বিবরণ"></textarea>
+
+        <label for="foodPrice">দাম (টাকা) *</label>
+        <input id="foodPrice" type="number" min="0" step="0.01"
+          placeholder="যেমন: ৩০" required>
+
+        <label for="foodEmoji">ইমোজি (ছবি না থাকলে)</label>
+        <input id="foodEmoji" maxlength="12" value="🍽️" placeholder="🍵">
+
+        <label for="foodImage">খাবারের ছবি</label>
+        <input id="foodImage" type="file" accept="image/jpeg,image/png,image/webp">
+        <p class="muted">JPG, PNG বা WebP ছবি বেছে নাও। সর্বোচ্চ ৫ MB।</p>
+        <img id="foodPreview" class="preview hidden" alt="খাবারের ছবির প্রিভিউ">
+
+        <label for="foodSort">মেনুতে অবস্থান</label>
+        <input id="foodSort" type="number" step="1" value="0">
+
+        <label>
+          <input id="foodAvailable" type="checkbox" checked
+            style="width:auto;margin-right:6px">
+          খাবারটি বিক্রির জন্য চালু থাকবে
+        </label>
+
+        <button id="foodSaveBtn" type="submit">＋ নতুন খাবার যোগ করো</button>
+        <button id="foodCancelBtn" class="secondary hidden" type="button">
+          সম্পাদনা বাতিল
+        </button>
+      </form>
+
+      <hr>
+      <div class="row">
+        <button id="loadFoodBtn" type="button">মেনু রিফ্রেশ</button>
+      </div>
+      <p id="foodSummary" class="muted">মেনু লোড হচ্ছে...</p>
+      <div id="foodList">লোড হচ্ছে...</div>
+    </div>
+
+    <!-- কাস্টমার নোটিশ -->
     <div class="card">
       <h3>📢 কাস্টমার নোটিশ</h3>
       <p class="muted">এখানে পাঠানো নোটিশ কাস্টমার পেজে দেখানো হবে। ব্যক্তিগত তথ্য লিখবে না।</p>
@@ -78,8 +148,9 @@ button:disabled{opacity:.6}
       <div id="noticeList">লোড হচ্ছে...</div>
     </div>
 
+    <!-- অর্ডার -->
     <div class="card">
-      <h3>সব অর্ডার</h3>
+      <h3>📦 সব অর্ডার</h3>
       <div id="orders">লোড হচ্ছে...</div>
     </div>
   </section>
@@ -91,6 +162,7 @@ button:disabled{opacity:.6}
 
 const SUPABASE_URL = "https://aidqolykizqvgqekgkch.supabase.co";
 const SUPABASE_KEY = "sb_publishable_-1Lacx4HBZLhN9xv3i4zgg_jH9QYB90";
+const BUCKET = "menu-photos";
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
@@ -100,6 +172,7 @@ let pollTimer = null;
 let audioContext = null;
 let alarmEnabled = false;
 let firstOrderLoad = true;
+let foodBusy = false;
 const knownOrderIds = new Set();
 
 const statusOptions = [
@@ -147,6 +220,7 @@ function statusLabel(value) {
 async function checkAdmin() {
   const {data: sessionData, error: sessionError} = await db.auth.getSession();
   if (sessionError) throw sessionError;
+
   if (!sessionData.session) {
     showLogin();
     return false;
@@ -160,11 +234,12 @@ async function checkAdmin() {
     showLogin();
     throw new Error("এই অ্যাকাউন্ট অ্যাডমিন হিসেবে অনুমোদিত নয়।");
   }
+
   showDashboard();
   return true;
 }
 
-/* ব্যবহারকারীর ক্লিকের পরেই অডিও চালু হবে */
+/* অ্যালার্ম */
 async function enableAlarm() {
   try {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -175,9 +250,8 @@ async function enableAlarm() {
 
     alarmEnabled = true;
     $("alarmBtn").textContent = "অ্যালার্ম চালু আছে ✓";
-    $("alarmInfo").textContent = "অ্যালার্ম পরীক্ষা করা হচ্ছে...";
     playAlarm();
-    $("alarmInfo").textContent = "অ্যালার্ম চালু আছে। নতুন অর্ডার এলে শব্দ হবে।";
+    $("alarmInfo").textContent = "নতুন অর্ডার এলে অ্যালার্ম বাজবে।";
   } catch (error) {
     message("অ্যালার্ম চালু হয়নি: " + error.message);
   }
@@ -196,7 +270,6 @@ function playAlarm() {
     gain.gain.setValueAtTime(0.001, start);
     gain.gain.exponentialRampToValueAtTime(0.25, start + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
-
     oscillator.connect(gain);
     gain.connect(audioContext.destination);
     oscillator.start(start);
@@ -204,10 +277,328 @@ function playAlarm() {
   });
 }
 
+/* খাবারের ছবি প্রিভিউ */
+$("foodImage").addEventListener("change", () => {
+  const file = $("foodImage").files[0];
+  const preview = $("foodPreview");
+
+  if (!file) {
+    preview.src = "";
+    preview.classList.add("hidden");
+    return;
+  }
+
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    $("foodImage").value = "";
+    preview.src = "";
+    preview.classList.add("hidden");
+    message("JPG, PNG অথবা WebP ছবি নির্বাচন করো।");
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    $("foodImage").value = "";
+    preview.src = "";
+    preview.classList.add("hidden");
+    message("ছবির আকার ৫ MB-এর কম হতে হবে।");
+    return;
+  }
+
+  preview.src = URL.createObjectURL(file);
+  preview.classList.remove("hidden");
+});
+
+/* খাবারের ছবি Storage-এ আপলোড */
+async function uploadFoodImage(file) {
+  if (!file) return null;
+
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error("ছবিটি JPG, PNG অথবা WebP হতে হবে।");
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("ছবির আকার ৫ MB-এর বেশি।");
+  }
+
+  const ext = ({
+    "image/jpeg":"jpg",
+    "image/png":"png",
+    "image/webp":"webp"
+  })[file.type];
+
+  const path = Date.now() + "-" +
+    Math.random().toString(36).slice(2, 10) + "." + ext;
+
+  const {error} = await db.storage.from(BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type
+  });
+
+  if (error) {
+    throw new Error(
+      "ছবি আপলোড হয়নি। Storage bucket ও upload policy পরীক্ষা করো। " +
+      error.message
+    );
+  }
+
+  const {data} = db.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function resetFoodForm() {
+  $("foodForm").reset();
+  $("foodId").value = "";
+  $("foodEmoji").value = "🍽️";
+  $("foodSort").value = "0";
+  $("foodAvailable").checked = true;
+  $("foodSaveBtn").textContent = "＋ নতুন খাবার যোগ করো";
+  $("foodCancelBtn").classList.add("hidden");
+  $("foodPreview").src = "";
+  $("foodPreview").classList.add("hidden");
+  $("foodImage").value = "";
+}
+
+$("foodCancelBtn").addEventListener("click", resetFoodForm);
+
+/* খাবার যোগ বা সম্পাদনা */
+$("foodForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (foodBusy) return;
+
+  const button = $("foodSaveBtn");
+  const id = $("foodId").value;
+  const name = $("foodName").value.trim();
+  const category = $("foodCategory").value;
+  const description = $("foodDescription").value.trim();
+  const price = Number($("foodPrice").value);
+  const emoji = $("foodEmoji").value.trim() || "🍽️";
+  const available = $("foodAvailable").checked;
+  const sortOrder = Number($("foodSort").value || 0);
+  const file = $("foodImage").files[0];
+
+  if (!name) return message("খাবারের নাম লিখো।");
+  if (!Number.isFinite(price) || price < 0) {
+    return message("সঠিক দাম লিখো।");
+  }
+  if (!Number.isFinite(sortOrder)) {
+    return message("মেনুর অবস্থানের জন্য সঠিক সংখ্যা লিখো।");
+  }
+
+  foodBusy = true;
+  button.disabled = true;
+  button.textContent = "সংরক্ষণ হচ্ছে...";
+
+  try {
+    if (!await checkAdmin()) return;
+
+    let imageUrl = $("foodPreview").dataset.savedUrl || null;
+
+    if (file) {
+      imageUrl = await uploadFoodImage(file);
+    }
+
+    const row = {
+      name,
+      category,
+      description,
+      price,
+      emoji,
+      image_url: imageUrl,
+      available,
+      sort_order: Math.trunc(sortOrder)
+    };
+
+    let result;
+
+    if (id) {
+      result = await db.from("menu_items")
+        .update(row)
+        .eq("id", id)
+        .select("id");
+
+      if (!result.error && (!result.data || !result.data.length)) {
+        throw new Error("খাবার আপডেট হয়নি। অ্যাডমিন অনুমতি ও RLS পরীক্ষা করো।");
+      }
+    } else {
+      result = await db.from("menu_items")
+        .insert(row)
+        .select("id");
+    }
+
+    if (result.error) throw result.error;
+
+    resetFoodForm();
+    message(id ? "খাবারের তথ্য আপডেট হয়েছে।" : "নতুন খাবার যোগ হয়েছে।", "success");
+    await loadFoods();
+  } catch (error) {
+    message("খাবার সংরক্ষণ করা যায়নি: " + (error.message || error));
+  } finally {
+    foodBusy = false;
+    button.disabled = false;
+    if ($("foodId").value) {
+      button.textContent = "পরিবর্তন সেভ করো";
+    } else {
+      button.textContent = "＋ নতুন খাবার যোগ করো";
+    }
+  }
+});
+
+/* মেনু লোড */
+async function loadFoods() {
+  $("foodList").textContent = "খাবার লোড হচ্ছে...";
+
+  try {
+    if (!await checkAdmin()) return;
+
+    const {data, error} = await db.from("menu_items")
+      .select("id,name,category,description,price,emoji,image_url,available,sort_order,created_at")
+      .order("sort_order", {ascending:true});
+
+    if (error) throw error;
+
+    const foods = data || [];
+    $("foodSummary").textContent =
+      "মোট খাবার: " + foods.length +
+      " | চালু: " + foods.filter(x => x.available !== false).length +
+      " | বন্ধ: " + foods.filter(x => x.available === false).length;
+
+    if (!foods.length) {
+      $("foodList").textContent = "এখনো খাবার যোগ করা হয়নি। উপরের ফর্ম ব্যবহার করো।";
+      return;
+    }
+
+    $("foodList").innerHTML = foods.map(food => `
+      <article class="food-card">
+        <div class="food-title">${escapeHTML(food.emoji || "🍽️")} ${escapeHTML(food.name)}</div>
+        ${food.image_url ? `
+          <img class="food-img" src="${escapeHTML(food.image_url)}"
+            alt="${escapeHTML(food.name)}" loading="lazy"
+            onerror="this.style.display='none'">
+        ` : `<div style="font-size:34px;margin:8px 0">${escapeHTML(food.emoji || "🍽️")}</div>`}
+        <div class="food-meta">
+          ক্যাটাগরি: ${escapeHTML(food.category || "অন্যান্য")}<br>
+          দাম: ৳${escapeHTML(food.price)}<br>
+          বিবরণ: ${escapeHTML(food.description || "নেই")}<br>
+          অবস্থা: <b>${food.available === false ? "বন্ধ" : "চালু"}</b><br>
+          ছবি: ${food.image_url ? "আছে" : "নেই"}
+        </div>
+        <div class="row">
+          <button type="button" class="editFood" data-id="${escapeHTML(food.id)}">✏️ সম্পাদনা</button>
+          <button type="button" class="toggleFood ${food.available === false ? "" : "orange"}"
+            data-id="${escapeHTML(food.id)}"
+            data-available="${food.available === false ? "false" : "true"}">
+            ${food.available === false ? "খাবার চালু করো" : "খাবার বন্ধ করো"}
+          </button>
+        </div>
+        <button type="button" class="danger deleteFood" data-id="${escapeHTML(food.id)}">🗑️ খাবার মুছে ফেলো</button>
+      </article>
+    `).join("");
+
+    $("foodList").dataset.loaded = "true";
+  } catch (error) {
+    $("foodList").textContent = "খাবার লোড হয়নি: " + error.message;
+  }
+}
+
+/* সম্পাদনা, চালু/বন্ধ, মুছে ফেলা */
+$("foodList").addEventListener("click", async event => {
+  const editBtn = event.target.closest(".editFood");
+  const toggleBtn = event.target.closest(".toggleFood");
+  const deleteBtn = event.target.closest(".deleteFood");
+  if (!editBtn && !toggleBtn && !deleteBtn) return;
+
+  const id = (editBtn || toggleBtn || deleteBtn).dataset.id;
+
+  try {
+    if (!await checkAdmin()) return;
+
+    if (editBtn) {
+      const {data, error} = await db.from("menu_items")
+        .select("*").eq("id", id).single();
+
+      if (error) throw error;
+
+      $("foodId").value = data.id;
+      $("foodName").value = data.name || "";
+      $("foodCategory").value = data.category || "অন্যান্য";
+
+      // পুরোনো ক্যাটাগরি তালিকায় না থাকলে সেটিও রাখা
+      if (![...$("foodCategory").options].some(o => o.value === data.category)) {
+        const opt = document.createElement("option");
+        opt.value = data.category;
+        opt.textContent = data.category;
+        $("foodCategory").appendChild(opt);
+        $("foodCategory").value = data.category;
+      }
+
+      $("foodDescription").value = data.description || "";
+      $("foodPrice").value = data.price ?? 0;
+      $("foodEmoji").value = data.emoji || "🍽️";
+      $("foodSort").value = data.sort_order ?? 0;
+      $("foodAvailable").checked = data.available !== false;
+      $("foodImage").value = "";
+
+      $("foodPreview").dataset.savedUrl = data.image_url || "";
+      if (data.image_url) {
+        $("foodPreview").src = data.image_url;
+        $("foodPreview").classList.remove("hidden");
+      } else {
+        $("foodPreview").src = "";
+        $("foodPreview").classList.add("hidden");
+      }
+
+      $("foodSaveBtn").textContent = "পরিবর্তন সেভ করো";
+      $("foodCancelBtn").classList.remove("hidden");
+      $("foodForm").scrollIntoView({behavior:"smooth", block:"start"});
+      message("খাবার সম্পাদনার জন্য ফর্মে আনা হয়েছে। ছবি বদলাতে নতুন ছবি নির্বাচন করো।", "success");
+      return;
+    }
+
+    if (toggleBtn) {
+      const newAvailable = toggleBtn.dataset.available !== "true";
+      toggleBtn.disabled = true;
+
+      const {data, error} = await db.from("menu_items")
+        .update({available:newAvailable})
+        .eq("id", id)
+        .select("id");
+
+      if (error) throw error;
+      if (!data || !data.length) throw new Error("পরিবর্তন হয়নি। RLS অনুমতি পরীক্ষা করো।");
+
+      message(newAvailable ? "খাবার চালু করা হয়েছে।" : "খাবার বন্ধ করা হয়েছে।", "success");
+      await loadFoods();
+      return;
+    }
+
+    if (deleteBtn) {
+      const ok = confirm("এই খাবারটি মুছে ফেলতে চাও? অর্ডারের পুরোনো তথ্য প্রভাবিত হতে পারে।");
+      if (!ok) return;
+
+      deleteBtn.disabled = true;
+      const {data, error} = await db.from("menu_items")
+        .delete().eq("id", id).select("id");
+
+      if (error) throw error;
+      if (!data || !data.length) {
+        throw new Error("খাবার মুছে ফেলা যায়নি। RLS অনুমতি পরীক্ষা করো।");
+      }
+
+      if ($("foodId").value === String(id)) resetFoodForm();
+      message("খাবার মুছে ফেলা হয়েছে।", "success");
+      await loadFoods();
+    }
+  } catch (error) {
+    message("কাজটি করা যায়নি: " + error.message);
+  }
+});
+
+$("loadFoodBtn").addEventListener("click", loadFoods);
+
+/* অর্ডার লোড */
 async function loadOrders(silent=false) {
   if (busy) return;
   busy = true;
-
   if (!silent) clearMessage();
 
   try {
@@ -218,7 +609,6 @@ async function loadOrders(silent=false) {
     if (error) throw error;
 
     const orders = data || [];
-
     orders.sort((a, b) => {
       const da = getField(a, ["created_at", "created at"]);
       const dbb = getField(b, ["created_at", "created at"]);
@@ -311,11 +701,8 @@ async function saveStatus(id, newStatus, button) {
     const allowed = await checkAdmin();
     if (!allowed) return;
 
-    const {data, error} = await db
-      .from("orders")
-      .update({status: newStatus})
-      .eq("id", id)
-      .select("id");
+    const {data, error} = await db.from("orders")
+      .update({status:newStatus}).eq("id", id).select("id");
 
     if (error) throw error;
     if (!data || data.length === 0) {
@@ -340,21 +727,17 @@ $("orders").addEventListener("click", async event => {
     await saveStatus(acceptBtn.dataset.orderId, "accepted", acceptBtn);
     return;
   }
-
   if (saveBtn) {
     const id = saveBtn.dataset.orderId;
-    const select = $("status-" + id);
-    await saveStatus(id, select.value, saveBtn);
+    await saveStatus(id, $("status-" + id).value, saveBtn);
   }
 });
 
+/* নোটিশ */
 async function loadNotices() {
   try {
-    const {data, error} = await db
-      .from("cafe_notices")
-      .select("*")
-      .order("created_at", {ascending:false})
-      .limit(10);
+    const {data, error} = await db.from("cafe_notices")
+      .select("*").order("created_at", {ascending:false}).limit(10);
 
     if (error) throw error;
 
@@ -386,8 +769,7 @@ $("noticeForm").addEventListener("submit", async event => {
   button.textContent = "পাঠানো হচ্ছে...";
 
   try {
-    const allowed = await checkAdmin();
-    if (!allowed) return;
+    if (!await checkAdmin()) return;
 
     const {error} = await db.from("cafe_notices").insert({message:text});
     if (error) throw error;
@@ -403,6 +785,7 @@ $("noticeForm").addEventListener("submit", async event => {
   }
 });
 
+/* অটো-রিফ্রেশ */
 function startAutoRefresh() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => {
@@ -417,11 +800,13 @@ $("alarmBtn").addEventListener("click", enableAlarm);
 $("refreshBtn").addEventListener("click", async () => {
   await loadOrders();
   await loadNotices();
+  await loadFoods();
 });
 
 $("loginForm").addEventListener("submit", async event => {
   event.preventDefault();
   clearMessage();
+
   const btn = $("loginBtn");
   btn.disabled = true;
   btn.textContent = "লগইন হচ্ছে...";
@@ -433,12 +818,12 @@ $("loginForm").addEventListener("submit", async event => {
     });
     if (error) throw error;
 
-    const allowed = await checkAdmin();
-    if (allowed) {
+    if (await checkAdmin()) {
       firstOrderLoad = true;
       knownOrderIds.clear();
       await loadOrders();
       await loadNotices();
+      await loadFoods();
       startAutoRefresh();
     }
   } catch (error) {
@@ -462,16 +847,17 @@ $("logoutBtn").addEventListener("click", async () => {
   showLogin();
   $("orders").innerHTML = "";
   $("noticeList").innerHTML = "";
+  $("foodList").innerHTML = "";
   clearMessage();
   message("লগআউট হয়েছে।", "success");
 });
 
 (async function init() {
   try {
-    const allowed = await checkAdmin();
-    if (allowed) {
+    if (await checkAdmin()) {
       await loadOrders();
       await loadNotices();
+      await loadFoods();
       startAutoRefresh();
     }
   } catch (error) {
