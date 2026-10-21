@@ -17,8 +17,9 @@ header p{margin:7px 0 0;color:#e5dfc7}
 .hero{margin:14px;padding:22px 16px;border-radius:18px;background:#e7eadb}
 .hero h2{margin:0 0 8px;font-size:24px}
 .hero p{line-height:1.7;margin:0}
-.notice-section{margin:14px;padding:16px;background:#fff8df;border:1px solid #e7d59c;border-radius:14px}
-.notice-section h2{margin:0 0 12px;font-size:20px}
+.notice-section,.history-section{margin:14px;padding:16px;background:#fff;border-radius:14px}
+.notice-section{background:#fff8df;border:1px solid #e7d59c}
+.notice-section h2,.history-section h2{margin:0 0 12px;font-size:20px}
 .notice-card{padding:12px 0;border-bottom:1px solid #e7dfc7;line-height:1.6;overflow-wrap:anywhere}
 .notice-card:last-child{border-bottom:0}
 .notice-date{display:block;color:#687568;font-size:12px;margin-top:5px}
@@ -42,6 +43,12 @@ select,input,textarea{width:100%;padding:12px;margin:7px 0;border:1px solid #ccc
 .send:disabled{opacity:.6}
 .qty-btn{margin-left:5px;padding:4px 10px;border:0;border-radius:6px;background:#e7eadb}
 #message{line-height:1.7;overflow-wrap:anywhere}
+.order-card{border:1px solid #e3e5db;border-radius:12px;padding:14px;margin:12px 0;background:#fff}
+.order-card h3{margin:0 0 8px}
+.order-card p{margin:6px 0;line-height:1.6;overflow-wrap:anywhere}
+.status{display:inline-block;padding:6px 10px;border-radius:20px;background:#e7eadb;color:#244c36;font-weight:bold;font-size:14px}
+.small-btn{border:0;border-radius:8px;padding:9px 12px;background:#244c36;color:white;margin-top:8px}
+.empty{color:#69756b;line-height:1.7}
 </style>
 </head>
 
@@ -57,10 +64,17 @@ select,input,textarea{width:100%;padding:12px;margin:7px 0;border:1px solid #ccc
   <p>এক কাপ চা, মজার নাস্তা আর জমিয়ে আড্ডা—আপনার সময়টা হোক সুন্দর।</p>
 </div>
 
-<!-- ক্যাফের নোটিশ -->
-<section class="notice-section" id="cafeNoticeBox">
+<section class="notice-section">
   <h2>📢 ক্যাফের নোটিশ</h2>
   <div id="cafeNoticeList" aria-live="polite">নোটিশ লোড হচ্ছে...</div>
+</section>
+
+<!-- আগের অর্ডার ও স্ট্যাটাস -->
+<section class="history-section" id="orderHistory">
+  <h2>🧾 আমার অর্ডার</h2>
+  <p class="empty" id="historyMessage">আপনার অর্ডার খোঁজা হচ্ছে...</p>
+  <div id="orderHistoryList" aria-live="polite"></div>
+  <button class="small-btn" onclick="refreshOrderHistory()">স্ট্যাটাস আপডেট করুন</button>
 </section>
 
 <section class="section">
@@ -108,6 +122,8 @@ select,input,textarea{width:100%;padding:12px;margin:7px 0;border:1px solid #ccc
 const SUPABASE_URL = "https://aidqolykizqvgqekgkch.supabase.co";
 const SUPABASE_KEY = "sb_publishable_-1Lacx4HBZLhN9xv3i4zgg_jH9QYB90";
 
+const STORAGE_KEY = "addaraj_saved_orders_v1";
+
 const products = [
   {id:1,name:"মাসালা চা",category:"চা",description:"মসলার সুগন্ধযুক্ত গরম চা",price:30,emoji:"🍵"},
   {id:2,name:"দুধ চা",category:"চা",description:"মজাদার দুধ চা",price:20,emoji:"☕"},
@@ -118,11 +134,211 @@ const products = [
 
 let cart = {};
 let orderSending = false;
+let historyLoading = false;
 
-const bn = n => String(n).replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[Number(d)]);
+const bn = n => String(n ?? "").replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[Number(d)]);
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;",
+    '"':"&quot;", "'":"&#39;"
+  }[ch]));
+}
+
+function apiHeaders(extra = {}) {
+  return {
+    "apikey": SUPABASE_KEY,
+    ...extra
+  };
+}
 
 /* =========================
-   ক্যাফের নোটিশ লোড
+   অর্ডার ফোনে সেভ ও লোড
+========================= */
+
+function getSavedOrders() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Saved order read error:", error);
+    return [];
+  }
+}
+
+function saveOrders(orders) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders.slice(0, 30)));
+    return true;
+  } catch (error) {
+    console.error("Saved order write error:", error);
+    document.getElementById("historyMessage").textContent =
+      "ফোনে অর্ডার সেভ করা যায়নি। ব্রাউজারের স্টোরেজ পরীক্ষা করুন।";
+    return false;
+  }
+}
+
+function rememberOrder(order) {
+  const orders = getSavedOrders();
+  const index = orders.findIndex(o => String(o.id) === String(order.id));
+
+  if (index >= 0) {
+    orders[index] = {...orders[index], ...order};
+  } else {
+    orders.unshift(order);
+  }
+
+  saveOrders(orders);
+  renderOrderHistory();
+}
+
+function statusText(status) {
+  const value = String(status || "").toLowerCase().trim();
+
+  const labels = {
+    pending: "অর্ডার অপেক্ষমাণ",
+    received: "অর্ডার গ্রহণ করা হয়েছে",
+    accepted: "অর্ডার গ্রহণ করা হয়েছে",
+    confirmed: "অর্ডার নিশ্চিত হয়েছে",
+    preparing: "খাবার তৈরি হচ্ছে",
+    cooking: "খাবার তৈরি হচ্ছে",
+    ready: "খাবার প্রস্তুত",
+    completed: "অর্ডার সম্পন্ন",
+    delivered: "অর্ডার পৌঁছে দেওয়া হয়েছে",
+    cancelled: "অর্ডার বাতিল",
+    canceled: "অর্ডার বাতিল"
+  };
+
+  return labels[value] || (status ? String(status) : "স্ট্যাটাস পাওয়া যায়নি");
+}
+
+function renderOrderHistory() {
+  const list = document.getElementById("orderHistoryList");
+  const message = document.getElementById("historyMessage");
+  const orders = getSavedOrders();
+
+  list.replaceChildren();
+
+  if (!orders.length) {
+    message.textContent = "এখনো এই ব্রাউজারে কোনো সেভ করা অর্ডার নেই।";
+    return;
+  }
+
+  message.textContent = "তোমার সেভ করা অর্ডার নিচে দেখা যাচ্ছে।";
+
+  orders.forEach(order => {
+    const card = document.createElement("div");
+    card.className = "order-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = "অর্ডার #" + bn(order.id);
+    card.appendChild(heading);
+
+    const status = document.createElement("div");
+    status.className = "status";
+    status.textContent = "📌 " + statusText(order.status);
+    card.appendChild(status);
+
+    const details = document.createElement("p");
+    details.textContent =
+      "টেবিল: " + bn(order.table_number || "-") +
+      " · মোট: ৳" + bn(order.total ?? "-");
+    card.appendChild(details);
+
+    if (order.items && order.items.length) {
+      const itemLine = document.createElement("p");
+      itemLine.textContent = "খাবার: " + order.items.map(item =>
+        item.name + " × " + bn(item.quantity)
+      ).join(", ");
+      card.appendChild(itemLine);
+    }
+
+    if (order.created_at) {
+      const dateLine = document.createElement("p");
+      const parsed = new Date(order.created_at);
+      dateLine.textContent = "অর্ডারের সময়: " +
+        (isNaN(parsed.getTime()) ? order.created_at : parsed.toLocaleString("bn-BD"));
+      card.appendChild(dateLine);
+    }
+
+    const refresh = document.createElement("button");
+    refresh.className = "small-btn";
+    refresh.textContent = "এই অর্ডারের স্ট্যাটাস দেখুন";
+    refresh.onclick = () => refreshOneOrder(order.id);
+    card.appendChild(refresh);
+
+    list.appendChild(card);
+  });
+}
+
+/* =========================
+   সুপাবেস থেকে স্ট্যাটাস
+========================= */
+
+async function refreshOneOrder(orderId) {
+  const orders = getSavedOrders();
+  const saved = orders.find(o => String(o.id) === String(orderId));
+
+  if (!saved) return;
+
+  try {
+    const url = SUPABASE_URL +
+      "/rest/v1/orders?select=id,table_number,total,status,created_at&id=eq." +
+      encodeURIComponent(orderId);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: apiHeaders(),
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error("HTTP " + response.status + ": " + errorText);
+    }
+
+    const rows = await response.json();
+
+    if (!Array.isArray(rows) || !rows.length) {
+      throw new Error("অর্ডার পাওয়া যায়নি। সুপাবেসের SELECT অনুমতি পরীক্ষা করতে হবে।");
+    }
+
+    const row = rows[0];
+
+    rememberOrder({
+      ...saved,
+      id: row.id,
+      table_number: row.table_number ?? saved.table_number,
+      total: row.total ?? saved.total,
+      status: row.status ?? saved.status,
+      created_at: row.created_at ?? saved.created_at
+    });
+
+  } catch (error) {
+    console.error("Order status error:", error);
+    document.getElementById("historyMessage").textContent =
+      "স্ট্যাটাস আপডেট হয়নি। আগের সেভ করা অর্ডার রাখা হয়েছে। " + error.message;
+  }
+}
+
+async function refreshOrderHistory() {
+  if (historyLoading) return;
+  historyLoading = true;
+
+  try {
+    const orders = getSavedOrders();
+
+    for (const order of orders) {
+      await refreshOneOrder(order.id);
+    }
+  } finally {
+    historyLoading = false;
+    renderOrderHistory();
+  }
+}
+
+/* =========================
+   ক্যাফের নোটিশ
 ========================= */
 
 async function loadCafeNotices() {
@@ -132,24 +348,15 @@ async function loadCafeNotices() {
     const response = await fetch(
       SUPABASE_URL +
       "/rest/v1/cafe_notices?select=id,message,created_at&order=created_at.desc&limit=5",
-      {
-        method: "GET",
-        headers: {
-          "apikey": SUPABASE_KEY
-        },
-        cache: "no-store"
-      }
+      {headers: apiHeaders(), cache: "no-store"}
     );
 
-    if (!response.ok) {
-      throw new Error("HTTP " + response.status);
-    }
+    if (!response.ok) throw new Error("HTTP " + response.status);
 
     const notices = await response.json();
-
     list.replaceChildren();
 
-    if (!Array.isArray(notices) || notices.length === 0) {
+    if (!Array.isArray(notices) || !notices.length) {
       list.textContent = "এখনো কোনো নোটিশ নেই।";
       return;
     }
@@ -165,34 +372,26 @@ async function loadCafeNotices() {
       if (item.created_at) {
         const date = document.createElement("small");
         date.className = "notice-date";
-
-        const parsedDate = new Date(item.created_at);
-        date.textContent = isNaN(parsedDate.getTime())
+        const parsed = new Date(item.created_at);
+        date.textContent = isNaN(parsed.getTime())
           ? ""
-          : parsedDate.toLocaleString("bn-BD");
-
+          : parsed.toLocaleString("bn-BD");
         card.appendChild(date);
       }
 
       list.appendChild(card);
     });
-
   } catch (error) {
     console.error("Cafe notice error:", error);
-    list.textContent =
-      "নোটিশ লোড করা যায়নি। (" + error.message + ")";
+    list.textContent = "নোটিশ লোড করা যায়নি।";
   }
 }
-
-/* প্রথমবার নোটিশ দেখাও, পরে প্রতি ১০ সেকেন্ডে আপডেট করো */
-loadCafeNotices();
-setInterval(loadCafeNotices, 10000);
 
 /* =========================
    মেনু
 ========================= */
 
-function renderMenu(category="সব") {
+function renderMenu(category = "সব") {
   const shown = products.filter(
     p => category === "সব" || p.category === category
   );
@@ -201,9 +400,9 @@ function renderMenu(category="সব") {
     <div class="item">
       <div class="food">${p.emoji}</div>
       <div class="details">
-        <h3>${p.name}</h3>
-        <p>${p.description}</p>
-        <div class="price">৳${p.price}</div>
+        <h3>${escapeHTML(p.name)}</h3>
+        <p>${escapeHTML(p.description)}</p>
+        <div class="price">৳${bn(p.price)}</div>
       </div>
       <button class="add" onclick="addItem(${p.id})">+ যোগ</button>
     </div>
@@ -236,7 +435,7 @@ function updateCart() {
       count += cart[p.id];
       total += p.price * cart[p.id];
 
-      return `<p>${p.name} × ${bn(cart[p.id])} — ৳${p.price * cart[p.id]}
+      return `<p>${escapeHTML(p.name)} × ${bn(cart[p.id])} — ৳${bn(p.price * cart[p.id])}
         <button class="qty-btn" onclick="changeQty(${p.id},-1)">−</button>
         <button class="qty-btn" onclick="changeQty(${p.id},1)">+</button>
       </p>`;
@@ -254,9 +453,7 @@ function changeQty(id, delta) {
 
 function openCart() {
   document.getElementById("cartList").style.display = "block";
-  document.getElementById("cartList").scrollIntoView({
-    behavior:"smooth"
-  });
+  document.getElementById("cartList").scrollIntoView({behavior:"smooth"});
 }
 
 /* =========================
@@ -280,12 +477,20 @@ async function placeOrder() {
     return;
   }
 
-  const items = products
+  const selectedItems = products
     .filter(p => cart[p.id] > 0)
     .map(p => ({
       menu_item_id: p.id,
-      quantity: cart[p.id]
+      name: p.name,
+      quantity: cart[p.id],
+      price: p.price,
+      subtotal: p.price * cart[p.id]
     }));
+
+  const rpcItems = selectedItems.map(item => ({
+    menu_item_id: item.menu_item_id,
+    quantity: item.quantity
+  }));
 
   orderSending = true;
   sendButton.disabled = true;
@@ -296,52 +501,91 @@ async function placeOrder() {
       SUPABASE_URL + "/rest/v1/rpc/place_cafe_order",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_KEY
-        },
+        headers: apiHeaders({"Content-Type":"application/json"}),
         body: JSON.stringify({
           p_table_number: Number(table),
           p_customer_name: document.getElementById("customer").value.trim(),
           p_note: document.getElementById("note").value.trim(),
-          p_items: items
+          p_items: rpcItems
         })
       }
     );
 
-    const result = await response.json();
+    const raw = await response.text();
+    let result;
+
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      result = raw;
+    }
 
     if (!response.ok) {
-      throw new Error(result.message || JSON.stringify(result));
+      throw new Error(
+        typeof result === "object"
+          ? (result.message || JSON.stringify(result))
+          : result
+      );
     }
 
-    if (!result || !result.order_id) {
-      throw new Error("অর্ডার নম্বর পাওয়া যায়নি।");
+    // RPC যদি JSON object অথবা এক-সদস্যের array ফেরত দেয়
+    const data = Array.isArray(result) ? result[0] : result;
+
+    if (!data || data.order_id == null) {
+      throw new Error("অর্ডার নম্বর পাওয়া যায়নি: " + raw);
     }
+
+    const order = {
+      id: data.order_id,
+      table_number: Number(table),
+      total: data.total ?? selectedItems.reduce((sum, item) => sum + item.subtotal, 0),
+      status: data.status || "pending",
+      created_at: new Date().toISOString(),
+      items: selectedItems
+    };
+
+    rememberOrder(order);
 
     message.textContent =
-      "অর্ডার গ্রহণ করা হয়েছে! অর্ডার নম্বর: " +
-      result.order_id +
-      "। মোট ৳" + result.total +
-      "। টাকা ক্যাফেতে সরাসরি পরিশোধ করুন।";
+      "অর্ডার গ্রহণ করা হয়েছে! অর্ডার নম্বর: " + bn(order.id) +
+      "। মোট ৳" + bn(order.total) +
+      "। টাকা ক্যাফেতে সরাসরি পরিশোধ করুন। নিচে অর্ডারের স্ট্যাটাস দেখতে পারবেন।";
 
     cart = {};
     updateCart();
+
     document.getElementById("customer").value = "";
     document.getElementById("note").value = "";
+
+    document.getElementById("orderHistory").scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+    // ডেটাবেসে অর্ডারের বর্তমান স্ট্যাটাস আনো
+    await refreshOneOrder(order.id);
 
   } catch (error) {
     message.textContent = "অর্ডার পাঠানো যায়নি: " + error.message;
     console.error("Order error:", error);
-
   } finally {
     orderSending = false;
     sendButton.disabled = false;
   }
 }
 
+/* =========================
+   চালু করা ও স্বয়ংক্রিয় আপডেট
+========================= */
+
 renderMenu();
 updateCart();
+renderOrderHistory();
+loadCafeNotices();
+refreshOrderHistory();
+
+setInterval(loadCafeNotices, 15000);
+setInterval(refreshOrderHistory, 8000);
 </script>
 </body>
 </html>
